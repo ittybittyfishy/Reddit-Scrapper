@@ -37,13 +37,21 @@ def analyze_sentiment(text):
 
 def draw_pie_chart(keyword, subreddit_name, sizes, labels):
 
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%',startangle=140)
+    # Draw a pie chart of the labels from the data
+    plt.pie(
+        sizes, 
+        labels=labels, 
+        autopct='%1.1f%%',
+        startangle=140, 
+        wedgeprops={'width': 0.2}
+        )
     plt.axis('equal') # Make it a circle
     plt.title(f"Sentiment Analysis for '{keyword}' in r/{subreddit_name}")
     plt.show()
 
 def draw_bar_chart(keyword, subreddit_name, sizes, labels):
 
+    # Draw a bar graph of the data
     plt.bar(labels, sizes)
     plt.xticks(rotation=30)
     plt.xlabel("Sentiment")
@@ -124,27 +132,29 @@ def main():
             case "1":
                 # Bar graph
                 draw_bar_chart(keyword, subreddit_name, sizes, labels)
-                otherGraph = input("Would you like to see the pie graph? (Yes/No)")
+                otherGraph = input("Would you like to see the pie graph? (Yes/No): ")
                 if otherGraph.lower() == 'yes':
                     draw_pie_chart(keyword, subreddit_name, sizes, labels)
-                else:
-                    continue
+                
+                # Ask user if they would like to do a new search
+                nextSearch = input("Would you like to do a new search? (Yes/No); ")
+                if nextSearch.lower() != 'yes':
+                    newSearch = False
             
             case "2":
                 # pie chart
                 draw_pie_chart(keyword, subreddit_name, sizes, labels)
-                otherGraph = input("Would you like to see the bar graph? (Yes/No)")
+                otherGraph = input("Would you like to see the bar graph? (Yes/No): ")
                 if otherGraph.lower() == 'yes':
                     draw_bar_chart(keyword, subreddit_name, sizes, labels)
-                else:
-                    continue
+                
+                # Ask user if they would like to do a new search
+                nextSearch = input("Would you like to do a new search? (Yes/No): ")
+                if nextSearch.lower() != 'yes':
+                    newSearch = False
+
             case "3":
                 # New Search
                 continue
-        
-        # Ask user if they would lilke to do a new search
-        nextSearch = input("Would you like to do a new search? (Yes/No)")
-        if nextSearch.lower() != 'yes':
-            newSearch = False
 
 main()
