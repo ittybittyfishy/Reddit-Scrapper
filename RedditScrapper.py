@@ -1,13 +1,14 @@
 import os
 from dotenv import load_dotenv
 import praw
-from textblob import TextBlob
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from collections import Counter, defaultdict
 import matplotlib.pyplot as plt
 import datetime as dt
 
 
 load_dotenv()  # Load Reddit project inforamtion from .env
+analyzer = SentimentIntensityAnalyzer()
 
 # PRAW Credentials 
 reddit = praw.Reddit(
@@ -20,23 +21,25 @@ reddit = praw.Reddit(
 
 # TextBlob Sentiment Analyzer 
 def analyze_sentiment(text):
-    polarity = TextBlob(text).sentiment.polarity
-    label = ""
-    if polarity >= 0.2:
+    score = analyzer.polarity_scores(text)
+    compound = score['compound']  # Ranges from -1 to 1
+
+    if compound >= 0.5:
         label = "Very Positive"
-    elif polarity >= 0.1 and polarity < 0.2:
+    elif compound >= 0.2:
         label = "Positive"
-    elif polarity >= 0.05 and polarity < 0.1:
+    elif compound >= 0.05:
         label = "Slightly Positive"
-    elif polarity <= -0.05 and polarity > -0.1:
-        label = "Slightly Negative"
-    elif polarity <= -0.1:
-        label = "Negative"
-    elif polarity <= -0.2 and polarity > -0.1:
+    elif compound <= -0.5:
         label = "Very Negative"
+    elif compound <= -0.2:
+        label = "Negative"
+    elif compound <= -0.05:
+        label = "Slightly Negative"
     else:
         label = "Neutral"
-    return label, polarity
+
+    return label, compound
 
 def draw_pie_chart(keyword, subreddit_name, sizes, labels):
 
@@ -75,30 +78,56 @@ def draw_line_graph(average_scores):
     plt.tight_layout()
     plt.show()
 
-def see_graphs(keyword, subreddit_name, sizes, labels, average_scores):
+def viewPosts(labels, grouped_by_label):
+    userViewPosts = True
+    while userViewPosts:
+        print("Available categories:")
+        for label in labels:
+            print(f"- {label}")
+                    
+        selected_label = input("Which sentiment would you like to see posts from?: ")
+        # Getting stuck here
+        posts = grouped_by_label.get(selected_label, [])
+
+        if posts:
+            print(f"\n--- Showing posts/comments labeled '{selected_label}' ---")
+            for i, text in enumerate(posts, 1):
+                print(f"\n#{i}:\n{text[:500]}{'...' if len(text) > 500 else ''}")
+        else:
+            print("No posts found for that sentiment.")
+                        
+        choice = input("Would you like to see posts with a different sentiment? (Yes/No)\n")
+        if choice.lower() != 'yes':
+            userViewPosts = False
+
+def see_graphs(keyword, subreddit_name, sizes, labels, average_scores, grouped_by_label):
     repeat = True
     while repeat:
         # Ask user if they would like to see the data put into a graph 
         chooseGraph = ""
 
-        while chooseGraph not in ["1","2","3","4"]:
-            chooseGraph = input("Would you like to see the data in a graph:\n1. Pie Chart\n2. Bar Graph\n3. Sentiments over time\n4. New Search\n")
+        while chooseGraph not in ["1","2","3","4","5"]:
+            chooseGraph = input("Would you like to see the data in a graph:\n1. Pie Chart\n2. Bar Graph\n3. Sentiments over time\n4. See posts based on specific sentiment\n5. New Search\n")
         
         # Load graph the user asks for
         match chooseGraph:
             case "1":
-                # Bar graph
-                draw_bar_chart(keyword, subreddit_name, sizes, labels)
-            
-            case "2":
                 # pie chart
                 draw_pie_chart(keyword, subreddit_name, sizes, labels)
+            
+            case "2":
+                # Bar graph
+                draw_bar_chart(keyword, subreddit_name, sizes, labels)
             
             case "3":
                 # Sentiment over time
                 draw_line_graph(average_scores)
 
             case "4":
+                # View other user posts
+                viewPosts(labels, grouped_by_label)
+
+            case "5":
                 repeat = False
 
 
@@ -110,6 +139,7 @@ def main():
         # Holds resulting sentiments 
         sentiments = []
         timestamps_and_scores = []
+        grouped_by_label = defaultdict(list)
 
         # User input to get results
         subreddit_name = input("Enter subreddit (or 'all'): ")
@@ -127,18 +157,29 @@ def main():
             else: 
                 # If the post body is empty, only analyze post title
                 content = post.title
+
             timestamp = dt.datetime.fromtimestamp(post.created_utc)
+
             label, polarity = analyze_sentiment(content)
-            timestamps_and_scores.append((timestamp.date(), polarity))
+
             sentiments.append((content, label))
+
+            timestamps_and_scores.append((timestamp.date(), polarity))
+
+            grouped_by_label[label].append(content)
 
         # Analyze reddit post comments 
         for comment in subreddit.comments(limit=limit):
             if keyword.lower() in comment.body.lower():
                 timestamp = dt.datetime.fromtimestamp(comment.created_utc)
+
                 label, polarity = analyze_sentiment(comment.body)
-                timestamps_and_scores.append((timestamp.date(), polarity))
+
                 sentiments.append((comment.body, label))
+
+                timestamps_and_scores.append((timestamp.date(), polarity))
+
+                grouped_by_label[label].append(comment.body)
 
         # for text, label in sentiments:
         #     print(f"\n[{label}]\n{text[:300]}...\n")
@@ -175,7 +216,7 @@ def main():
         average_scores = {date: sum(scores)/len(scores) for date, scores in daily_scores.items()}
         average_scores = dict(sorted(average_scores.items()))
         
-        see_graphs(keyword, subreddit_name, sizes, labels, average_scores)
+        see_graphs(keyword, subreddit_name, sizes, labels, average_scores, grouped_by_label)
 
         choice = input("Would you like to make a new search? (Yes/No)\n")
         if choice.lower() != 'yes':
