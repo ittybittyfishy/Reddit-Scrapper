@@ -6,11 +6,17 @@ from collections import Counter, defaultdict
 import matplotlib.pyplot as plt
 import datetime as dt
 
+# ============================
+# Reddit Sentiment Analyzer
+# ============================
 
-load_dotenv()  # Load Reddit project inforamtion from .env
+# Load Reddit project inforamtion from .env
+load_dotenv()  
+
+# Initialize VADER sentiment analyzer
 analyzer = SentimentIntensityAnalyzer()
 
-# PRAW Credentials 
+# Configure PRAW Credentials from env
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -19,11 +25,13 @@ reddit = praw.Reddit(
     password=os.getenv("REDDIT_PASSWORD")
 )
 
-# TextBlob Sentiment Analyzer 
+# Function to analyze sentiment and assign a label
 def analyze_sentiment(text):
+    # Get sentiment scoresL compound score ranges from -1(negative) to +1 (positive)
     score = analyzer.polarity_scores(text)
     compound = score['compound']  # Ranges from -1 to 1
 
+    # Categorize the score into a human-readable label
     if compound >= 0.5:
         label = "Very Positive"
     elif compound >= 0.2:
@@ -41,9 +49,8 @@ def analyze_sentiment(text):
 
     return label, compound
 
+# Plot a pie chart to show the distrbution of sentiment categories
 def draw_pie_chart(keyword, subreddit_name, sizes, labels):
-
-    # Draw a pie chart of the labels from the data
     plt.pie(
         sizes, 
         labels=labels, 
@@ -51,13 +58,12 @@ def draw_pie_chart(keyword, subreddit_name, sizes, labels):
         startangle=140, 
         wedgeprops={'width': 0.2}
         )
-    plt.axis('equal') # Make it a circle
+    plt.axis('equal') # Keeps it circular
     plt.title(f"Sentiment Analysis for '{keyword}' in r/{subreddit_name}")
     plt.show()
 
+# Plot a bar chart to compare sentiment catergory frequencies 
 def draw_bar_chart(keyword, subreddit_name, sizes, labels):
-
-    # Draw a bar graph of the data
     plt.bar(labels, sizes)
     plt.xticks(rotation=30)
     plt.xlabel("Sentiment")
@@ -66,7 +72,9 @@ def draw_bar_chart(keyword, subreddit_name, sizes, labels):
     plt.tight_layout()
     plt.show()
 
+# Plot a scatterplot of average sentiment score by day
 def draw_line_graph(average_scores):
+    # Get average sentiment score based on date
     dates = sorted(average_scores.keys())
     avg_values = [average_scores[date] for date in dates]
 
@@ -78,34 +86,39 @@ def draw_line_graph(average_scores):
     plt.tight_layout()
     plt.show()
 
+# Allow users to view posts grouped by a specific sentiment label
 def viewPosts(labels, grouped_by_label):
     userViewPosts = True
     while userViewPosts:
         print("Available categories:")
         for label in labels:
             print(f"- {label}")
-                    
+
+        # Ask the user for which sentiment they want to review     
         selected_label = input("Which sentiment would you like to see posts from?: ")
-        # Getting stuck here
         posts = grouped_by_label.get(selected_label, [])
 
+        # If the chosen sentiment has posts, print them 
         if posts:
             print(f"\n--- Showing posts/comments labeled '{selected_label}' ---")
             for i, text in enumerate(posts, 1):
+                # Limit the length of the post
                 print(f"\n#{i}:\n{text[:500]}{'...' if len(text) > 500 else ''}")
         else:
             print("No posts found for that sentiment.")
-                        
-        choice = input("Would you like to see posts with a different sentiment? (Yes/No)\n")
+
+        # Ask if they'd like to continue browsing posts              
+        choice = input("\nWould you like to see posts with a different sentiment? (Yes/No)\n")
         if choice.lower() != 'yes':
             userViewPosts = False
 
+# Display visualizations or allow post review based on user selection
 def see_graphs(keyword, subreddit_name, sizes, labels, average_scores, grouped_by_label):
     repeat = True
     while repeat:
-        # Ask user if they would like to see the data put into a graph 
-        chooseGraph = ""
 
+        # Get user choice for option
+        chooseGraph = ""
         while chooseGraph not in ["1","2","3","4","5"]:
             chooseGraph = input("Would you like to see the data in a graph:\n1. Pie Chart\n2. Bar Graph\n3. Sentiments over time\n4. See posts based on specific sentiment\n5. New Search\n")
         
@@ -130,26 +143,24 @@ def see_graphs(keyword, subreddit_name, sizes, labels, average_scores, grouped_b
             case "5":
                 repeat = False
 
-
+# Main program loop: handles user input and runs analysis
 def main():
-
     newSearch = True
 
     while newSearch:
-        # Holds resulting sentiments 
-        sentiments = []
-        timestamps_and_scores = []
-        grouped_by_label = defaultdict(list)
+        sentiments = [] # stores (text, label)
+        timestamps_and_scores = [] # stores (date, polarity score)
+        grouped_by_label = defaultdict(list) # stores label -> list of text
 
-        # User input to get results
-        subreddit_name = input("Enter subreddit (or 'all'): ")
+        # Get user input
+        subreddit_name = input("Enter desired subreddit (or 'all'): ")
         keyword = input("Enter search keyword: ")
-        limit = int(input("How many posts? "))
+        limit = int(input("How many posts would you like to parse? "))
 
-        # Ensure subreddit exists
+        # Set subreddit
         subreddit = reddit.subreddit(subreddit_name)
 
-        # Analyze title and content of post and assign sentimanet score
+        # Analyze reddit posts
         for post in subreddit.search(keyword, limit=limit):
             # Ensure that the post body is not empty
             if post.selftext:
@@ -159,35 +170,26 @@ def main():
                 content = post.title
 
             timestamp = dt.datetime.fromtimestamp(post.created_utc)
-
             label, polarity = analyze_sentiment(content)
 
             sentiments.append((content, label))
-
             timestamps_and_scores.append((timestamp.date(), polarity))
-
             grouped_by_label[label].append(content)
 
-        # Analyze reddit post comments 
+        # Analyze subreddit comments 
         for comment in subreddit.comments(limit=limit):
             if keyword.lower() in comment.body.lower():
                 timestamp = dt.datetime.fromtimestamp(comment.created_utc)
-
                 label, polarity = analyze_sentiment(comment.body)
 
                 sentiments.append((comment.body, label))
-
                 timestamps_and_scores.append((timestamp.date(), polarity))
-
                 grouped_by_label[label].append(comment.body)
 
-        # for text, label in sentiments:
-        #     print(f"\n[{label}]\n{text[:300]}...\n")
-
-        # Count number of each label 
+        # Prepare sorted label list and their corresponding counts
         sentiment_counts = Counter([label for _, label in sentiments])
 
-        # Sort the labels
+        # Sort the labels from Very Postive to Very Negative
         ordered_labels = [
             "Very Positive",
             "Positive",
@@ -209,18 +211,23 @@ def main():
         # Print the sentiment analysis
         print(sentiment_counts)
 
+        # Organize scores by date for trend analysis
         daily_scores = defaultdict(list)
         for date, score in timestamps_and_scores:
             daily_scores[date].append(score)
 
+        # Calculate daily average sentiment score
         average_scores = {date: sum(scores)/len(scores) for date, scores in daily_scores.items()}
         average_scores = dict(sorted(average_scores.items()))
         
+        # Show visualizations and allow post exploration
         see_graphs(keyword, subreddit_name, sizes, labels, average_scores, grouped_by_label)
 
+        # Ask if user wants to start a new analysis
         choice = input("Would you like to make a new search? (Yes/No)\n")
         if choice.lower() != 'yes':
-            print("Thank you for using my Reddit Scrapepr! Bye bye!")
+            print("Thank you for using my Reddit Scraper! Bye bye!")
             newSearch = False
-    
+
+# Run the program   
 main()
