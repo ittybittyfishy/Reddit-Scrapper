@@ -2,8 +2,9 @@ import os
 from dotenv import load_dotenv
 import praw
 from textblob import TextBlob
-from collections import Counter
+from collections import Counter, defaultdict
 import matplotlib.pyplot as plt
+import datetime as dt
 
 
 load_dotenv()  # Load Reddit project inforamtion from .env
@@ -20,20 +21,22 @@ reddit = praw.Reddit(
 # TextBlob Sentiment Analyzer 
 def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
+    label = ""
     if polarity >= 0.2:
-        return "Very Positive"
+        label = "Very Positive"
     elif polarity >= 0.1 and polarity < 0.2:
-        return "Positive"
+        label = "Positive"
     elif polarity >= 0.05 and polarity < 0.1:
-        return "Slightly Positive"
+        label = "Slightly Positive"
     elif polarity <= -0.05 and polarity > -0.1:
-        return "Slightly Negative"
+        label = "Slightly Negative"
     elif polarity <= -0.1:
-        return "Negative"
+        label = "Negative"
     elif polarity <= -0.2 and polarity > -0.1:
-        return "Very Negative"
+        label = "Very Negative"
     else:
-        return "Neutral"
+        label = "Neutral"
+    return label, polarity
 
 def draw_pie_chart(keyword, subreddit_name, sizes, labels):
 
@@ -60,6 +63,45 @@ def draw_bar_chart(keyword, subreddit_name, sizes, labels):
     plt.tight_layout()
     plt.show()
 
+def draw_line_graph(average_scores):
+    dates = sorted(average_scores.keys())
+    avg_values = [average_scores[date] for date in dates]
+
+    plt.scatter(dates, avg_values, c=avg_values, cmap='coolwarm', edgecolors='k')
+    plt.xticks(rotation=30)
+    plt.xlabel("Date")
+    plt.ylabel("Average Sentiment Score")
+    plt.title("Sentiment Over Time")
+    plt.tight_layout()
+    plt.show()
+
+def see_graphs(keyword, subreddit_name, sizes, labels, average_scores):
+    repeat = True
+    while repeat:
+        # Ask user if they would like to see the data put into a graph 
+        chooseGraph = ""
+
+        while chooseGraph not in ["1","2","3","4"]:
+            chooseGraph = input("Would you like to see the data in a graph:\n1. Pie Chart\n2. Bar Graph\n3. Sentiments over time\n4. New Search\n")
+        
+        # Load graph the user asks for
+        match chooseGraph:
+            case "1":
+                # Bar graph
+                draw_bar_chart(keyword, subreddit_name, sizes, labels)
+            
+            case "2":
+                # pie chart
+                draw_pie_chart(keyword, subreddit_name, sizes, labels)
+            
+            case "3":
+                # Sentiment over time
+                draw_line_graph(average_scores)
+
+            case "4":
+                repeat = False
+
+
 def main():
 
     newSearch = True
@@ -67,6 +109,7 @@ def main():
     while newSearch:
         # Holds resulting sentiments 
         sentiments = []
+        timestamps_and_scores = []
 
         # User input to get results
         subreddit_name = input("Enter subreddit (or 'all'): ")
@@ -84,13 +127,17 @@ def main():
             else: 
                 # If the post body is empty, only analyze post title
                 content = post.title
-            label = analyze_sentiment(content)
+            timestamp = dt.datetime.fromtimestamp(post.created_utc)
+            label, polarity = analyze_sentiment(content)
+            timestamps_and_scores.append((timestamp.date(), polarity))
             sentiments.append((content, label))
 
         # Analyze reddit post comments 
         for comment in subreddit.comments(limit=limit):
             if keyword.lower() in comment.body.lower():
-                label = analyze_sentiment(comment.body)
+                timestamp = dt.datetime.fromtimestamp(comment.created_utc)
+                label, polarity = analyze_sentiment(comment.body)
+                timestamps_and_scores.append((timestamp.date(), polarity))
                 sentiments.append((comment.body, label))
 
         # for text, label in sentiments:
@@ -121,40 +168,18 @@ def main():
         # Print the sentiment analysis
         print(sentiment_counts)
 
-        # Ask user if they would like to see the data put into a graph 
-        chooseGraph = ""
+        daily_scores = defaultdict(list)
+        for date, score in timestamps_and_scores:
+            daily_scores[date].append(score)
 
-        while chooseGraph not in ["1","2","3"]:
-            chooseGraph = input("Would you like to see the inforion displayed as: \n1. Bar graph\n2. Pie chart\n3. New search\n")
+        average_scores = {date: sum(scores)/len(scores) for date, scores in daily_scores.items()}
+        average_scores = dict(sorted(average_scores.items()))
         
-        # Load graph the user asks for
-        match chooseGraph:
-            case "1":
-                # Bar graph
-                draw_bar_chart(keyword, subreddit_name, sizes, labels)
-                otherGraph = input("Would you like to see the pie graph? (Yes/No): ")
-                if otherGraph.lower() == 'yes':
-                    draw_pie_chart(keyword, subreddit_name, sizes, labels)
-                
-                # Ask user if they would like to do a new search
-                nextSearch = input("Would you like to do a new search? (Yes/No); ")
-                if nextSearch.lower() != 'yes':
-                    newSearch = False
-            
-            case "2":
-                # pie chart
-                draw_pie_chart(keyword, subreddit_name, sizes, labels)
-                otherGraph = input("Would you like to see the bar graph? (Yes/No): ")
-                if otherGraph.lower() == 'yes':
-                    draw_bar_chart(keyword, subreddit_name, sizes, labels)
-                
-                # Ask user if they would like to do a new search
-                nextSearch = input("Would you like to do a new search? (Yes/No): ")
-                if nextSearch.lower() != 'yes':
-                    newSearch = False
+        see_graphs(keyword, subreddit_name, sizes, labels, average_scores)
 
-            case "3":
-                # New Search
-                continue
-
+        choice = input("Would you like to make a new search? (Yes/No)\n")
+        if choice.lower() != 'yes':
+            print("Thank you for using my Reddit Scrapepr! Bye bye!")
+            newSearch = False
+    
 main()
