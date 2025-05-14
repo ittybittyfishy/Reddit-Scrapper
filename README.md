@@ -46,21 +46,20 @@ trends over time.
    REDDIT_PASSWORD=your_password
    ```
 
-   Create a Reddit API App:
-   Go to: https://www.reddit.com/prefs/apps
+   Create a Reddit API App. Go to: https://www.reddit.com/prefs/apps
 
    1. Scroll down to “Developed Applications” -> Click “Create App”
 
    2. Fill in:
-         Name: e.g. reddit-sentiment-analyzer
-         Type: Script
-         Redirect URI: http://localhost:8080 (required, even if unused)
+         - Name: e.g. reddit-sentiment-analyzer
+         - Type: Script
+         - Redirect URI: http://localhost:8080 (required, even if unused)
 
    3. Submit -> Copy:
-         client_id (right under the app name)
-         client_secret
+         - client_id (right under the app name)
+         - client_secret
 
-   4. Then they'd plug those into a .env file
+   4. Then plug those into a .env file
 
 ## Usage
 
