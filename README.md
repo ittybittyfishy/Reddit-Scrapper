@@ -29,14 +29,14 @@ trends over time.
 ## Setup Instructions
 
 1. Clone the repo:
-
+   ```
    git clone https://github.com/ittybittyfishy/Reddit-Scrapper.git
    cd reddit-sentiment-analyzer
-
+   ```
 2. Install the required libraries:
-
+   ```
    pip install -r requirements.txt
-
+   ```
 3. Create a `.env` file with your Reddit app credentials:
    ```
    REDDIT_CLIENT_ID=your_id_here
@@ -64,9 +64,9 @@ trends over time.
 ## Usage
 
 Run the program:
-
+   ```
    python reddit_scraper.py
-
+   ```
 - Input subreddit, keyword, and number of posts.
 - Choose how to view data: pie chart, bar graph, sentiment over time.
 - Optionally browse posts by sentiment category.
