@@ -31,7 +31,7 @@ trends over time.
 1. Clone the repo:
    ```
    git clone https://github.com/ittybittyfishy/Reddit-Scrapper.git
-   cd reddit-sentiment-analyzer
+   cd Reddit-Scrapper
    ```
 2. Install the required libraries:
    ```
