@@ -1,4 +1,4 @@
-# Reddit Sentiment Analyzer (Terminal Edition)
+# Reddit Sentiment Analyzer (Terminal)
 
 A command-line tool that scrapes Reddit posts & comments using PRAW,
 analyzes their sentiment with VADER (Valence Aware Dictionary), and 
@@ -38,24 +38,25 @@ trends over time.
    pip install -r requirements.txt
 
 3. Create a `.env` file with your Reddit app credentials:
-
+   ```
    REDDIT_CLIENT_ID=your_id_here
    REDDIT_CLIENT_SECRET=your_secret
    REDDIT_USER_AGENT=analyzer by u/your_username
    REDDIT_USERNAME=your_username
    REDDIT_PASSWORD=your_password
+   ```
 
    Create a Reddit API App:
    Go to: https://www.reddit.com/prefs/apps
 
-   1. Scroll down to “Developed Applications” → Click “Create App”
+   1. Scroll down to “Developed Applications” -> Click “Create App”
 
    2. Fill in:
          Name: e.g. reddit-sentiment-analyzer
          Type: Script
          Redirect URI: http://localhost:8080 (required, even if unused)
 
-   3. Submit → Copy:
+   3. Submit -> Copy:
          client_id (right under the app name)
          client_secret
 
