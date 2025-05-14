@@ -30,7 +30,7 @@ trends over time.
 
 1. Clone the repo:
 
-   git clone https://github.com/YOUR_USERNAME/reddit-sentiment-analyzer.git
+   git clone https://github.com/ittybittyfishy/Reddit-Scrapper.git
    cd reddit-sentiment-analyzer
 
 2. Install the required libraries:
@@ -44,6 +44,22 @@ trends over time.
    REDDIT_USER_AGENT=analyzer by u/your_username
    REDDIT_USERNAME=your_username
    REDDIT_PASSWORD=your_password
+
+   Create a Reddit API App:
+   Go to: https://www.reddit.com/prefs/apps
+
+   1. Scroll down to “Developed Applications” → Click “Create App”
+
+   2. Fill in:
+         Name: e.g. reddit-sentiment-analyzer
+         Type: Script
+         Redirect URI: http://localhost:8080 (required, even if unused)
+
+   3. Submit → Copy:
+         client_id (right under the app name)
+         client_secret
+
+   4. Then they'd plug those into a .env file
 
 ## Usage
 
